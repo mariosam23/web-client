@@ -1,6 +1,11 @@
 #ifndef _HELPERS_
 #define _HELPERS_
 
+#include <stdio.h>
+#include <iostream>
+
+using namespace std;
+
 #define BUFLEN 4096
 #define LINELEN 1000
 
@@ -24,5 +29,11 @@ char *receive_from_server(int sockfd);
 
 // extracts and returns a JSON from a server response
 char *basic_extract_json_response(char *str);
+
+// extracts and returns a cookie from a server response
+string get_cookie(string response);
+
+// extracts and returns a jwt token from a server response
+string get_jwt_token(string response);
 
 #endif

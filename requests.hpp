@@ -1,13 +1,24 @@
 #ifndef _REQUESTS_
 #define _REQUESTS_
 
-// computes and returns a GET request string (query_params
-// and cookies can be set to NULL if not needed)
-char *compute_get_request(char *host, char *url, char *query_params,
-							char **cookies, int cookies_count);
+#include <string>
 
-// computes and returns a POST request string (cookies can be NULL if not needed)
-char *compute_post_request(char *host, char *url, char* content_type, char **body_data,
-							int body_data_fields_count, char** cookies, int cookies_count);
+#include "utils.hpp"
+
+using namespace std;
+
+// computes and returns a GET request string (query_params
+// can be set to NULL if not needed)
+string compute_get_request(char *host, char *url, char *query_params,
+						   user_data_t &user_data);
+
+// computes and returns a DELETE request string (query_params
+// can be set to NULL if not needed)
+string compute_delete_request(char *host, char *url, char *query_params,
+							  user_data_t &user_data);
+
+// computes and returns a POST request string
+string compute_post_request(char *host, char *url, string payload,
+							user_data_t &user_data);
 
 #endif
