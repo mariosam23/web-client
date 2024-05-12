@@ -1,94 +1,107 @@
-#include <stdlib.h>     /* exit, atoi, malloc, free */
-#include <stdio.h>
-#include <unistd.h>     /* read, write, close */
-#include <string.h>     /* memcpy, memset */
-#include <sys/socket.h> /* socket, connect */
-#include <netinet/in.h> /* struct sockaddr_in, struct sockaddr */
-#include <netdb.h>      /* struct hostent, gethostbyname */
-#include <arpa/inet.h>
-#include "helpers.hpp"
 #include "requests.hpp"
 
-char *compute_get_request(char *host, char *url, char *query_params,
-                          char **cookies, int cookies_count)
-{
-    char *message = (char* )calloc(BUFLEN, sizeof(char));
-    char *line = (char* )calloc(LINELEN, sizeof(char));
+#include <arpa/inet.h>
+#include <netdb.h>		/* struct hostent, gethostbyname */
+#include <netinet/in.h> /* struct sockaddr_in, struct sockaddr */
+#include <stdio.h>
+#include <stdlib.h>		/* exit, atoi, malloc, free */
+#include <string.h>		/* memcpy, memset */
+#include <sys/socket.h> /* socket, connect */
+#include <unistd.h>		/* read, write, close */
 
-    // Step 1: write the method name, URL, request params (if any) and protocol type
-    if (query_params != NULL) {
-        sprintf(line, "GET %s?%s HTTP/1.1", url, query_params);
-    } else {
-        sprintf(line, "GET %s HTTP/1.1", url);
-    }
-    compute_message(message, line);
+#include <string>
 
-    sprintf(line, "Host: %s", host);
-    compute_message(message, line);
+#include "helpers.hpp"
+#include "utils.hpp"
 
-    if (cookies != NULL && cookies_count > 0) {
-        strcat(message, "Cookie: ");
-        for (int i = 0; i < cookies_count; ++i) {
-            strcat(message, cookies[i]);
-            if (i < cookies_count - 1) {
-                strcat(message, "; ");
-            }
-        }
-        strcat(message, "\r\n");
-    }
+using namespace std;
 
-    compute_message(message, "");
-    free(line);
-    return message;
+string compute_get_request(char *host, char *url, char *query_params,
+						   user_data_t &user_data) {
+	string message = "";
+	string line = "";
+
+	if (query_params)
+		line = "GET " + string(url) + "?" + query_params + " HTTP/1.1";
+	else
+		line = "GET " + string(url) + " HTTP/1.1";
+
+	message += line + "\r\n";
+
+	line = "Host: " + string(host);
+	message += line + "\r\n";
+
+	if (user_data.has_library_access) {
+		line = "Authorization: Bearer " + user_data.jwt_token;
+		message += line + "\r\n";
+	}
+
+	if (!user_data.cookie.empty()) {
+		line = "Cookie: " + user_data.cookie;
+		message += line + "\r\n";
+	}
+
+	message += "\r\n";
+	return message;
 }
 
+string compute_delete_request(char *host, char *url, char *query_params,
+							  user_data_t &user_data) {
+	string message = "";
+	string line = "";
 
-char *compute_post_request(char *host, char *url, char* content_type, char **body_data,
-                           int body_data_fields_count, char **cookies, int cookies_count)
-{
-    char *message = (char* )calloc(BUFLEN, sizeof(char));
-    char *line = (char* )calloc(LINELEN, sizeof(char));
-    char *body_data_buffer = (char* )calloc(LINELEN, sizeof(char));
+	if (query_params)
+		line = "DELETE " + string(url) + "?" + query_params + " HTTP/1.1";
+	else
+		line = "DELETE " + string(url) + " HTTP/1.1";
 
-    // Step 1: write the method name, URL and protocol type
-    sprintf(line, "POST %s HTTP/1.1", url);
-    compute_message(message, line);
+	message += line + "\r\n";
 
-    // Step 2: add the host
-    sprintf(line, "Host: %s", host);
-    compute_message(message, line);
+	line = "Host: " + string(host);
+	message += line + "\r\n";
 
-    // Step 3: add necessary headers
-    for (int i = 0; i < body_data_fields_count; ++i) {
-        strcat(body_data_buffer, body_data[i]);
-        if (i < body_data_fields_count - 1) {
-            strcat(body_data_buffer, "&");
-        }
-    }
-    sprintf(line, "Content-Type: %s", content_type);
-    compute_message(message, line);
-    sprintf(line, "Content-Length: %ld", strlen(body_data_buffer));
-    compute_message(message, line);
+	if (user_data.has_library_access) {
+		line = "Authorization: Bearer " + user_data.jwt_token;
+		message += line + "\r\n";
+	}
 
-    // Step 4 (optional): add cookies
-    if (cookies != NULL && cookies_count > 0) {
-        strcat(message, "Cookie: ");
-        for (int i = 0; i < cookies_count; ++i) {
-            strcat(message, cookies[i]);
-            if (i < cookies_count - 1) {
-                strcat(message, "; ");
-            }
-        }
-        strcat(message, "\r\n");
-    }
+	if (!user_data.cookie.empty()) {
+		line = "Cookie: " + user_data.cookie;
+		message += line + "\r\n";
+	}
 
-    // Step 5: add new line at end of header
-    strcat(message, "\r\n");
+	message += "\r\n";
+	return message;
+}
 
-    // Step 6: add the actual payload data
-    strcat(message, body_data_buffer);
+string compute_post_request(char *host, char *url, string payload,
+							user_data_t &user_data) {
+	string message = "";
+	string line = "";
 
-    free(line);
-    free(body_data_buffer);
-    return message;
+	line = "POST " + string(url) + " HTTP/1.1";
+	message += line + "\r\n";
+
+	line = "Host: " + string(host);
+	message += line + "\r\n";
+
+	line = "Content-Type: " + CONTENT_TYPE;
+	message += line + "\r\n";
+
+	if (user_data.has_library_access) {
+		line = "Authorization: Bearer " + user_data.jwt_token;
+		message += line + "\r\n";
+	}
+
+	if (!user_data.cookie.empty()) {
+		line = "Cookie: " + user_data.cookie;
+		message += line + "\r\n";
+	}
+
+	line = "Content-Length: " + to_string(payload.size());
+	message += line + "\r\n";
+
+	message += "\r\n" + payload + "\r\n";
+
+	return message;
 }

@@ -9,71 +9,64 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
+#include "commands.hpp"
 #include "helpers.hpp"
 #include "requests.hpp"
 #include "utils.hpp"
 #include "validator.hpp"
 
 using namespace std;
+using json = nlohmann::json;
 
 int main(int argc, char *argv[]) {
-	unordered_set<string> all_users;
-	unordered_set<string> logged_users;
-	int sockfd;
-	string jwt_token, cookie;
+	user_data_t user_data = user_data_t();
 
 	cout << INIT_MSG;
+
+	unordered_map<string, Command> command_map = get_command_map();
 
 	while (true) {
 		string command;
 		getline(cin, command);
 
-		if (command == "exit") {
-			return SUCCESS_EXIT_CODE;
-		} else if (command == "register") {
-			string username, password;
-			cout << "username=";
-			getline(cin, username);
-			cout << "password=";
-			getline(cin, password);
+		Command current_command = UNKNOWN;
+		if (command_map.find(command) != command_map.end()) {
+			current_command = command_map[command];
+		}
 
-			if (!check_string_with_no_spaces(username) ||
-				!check_string_with_no_spaces(password)) {
-				cout << "Invalid username or password\n";
-				continue;
-			}
-
-			if (all_users.find(username) != all_users.end()) {
-				cout << "User already exists\n";
-				continue;
-			}
-
-			if (logged_users.find(username) != logged_users.end()) {
-				cout << "User already logged in\n";
-				continue;
-			}
-
-			all_users.insert(username);
-			all_users.insert(username);
-			nlohmann::json j;
-			j["username"] = username;
-			j["password"] = password;
-
-			string payload = j.dump();
-
-			sockfd = open_connection(HOST_IP, PORT, AF_INET, SOCK_STREAM, 0);
-			char *message =
-				compute_post_request(HOST_IP, REGISTER_ROUTE, (char *)CONTENT_TYPE,
-									 (char **)payload.c_str(), 1, NULL, 0);
-			send_to_server(sockfd, message);
-            char *response = receive_from_server(sockfd);
-            cout << response << endl;
-			close(sockfd);
-		} else {
-			cout << "Unknown command\n";
+		switch (current_command) {
+			case REGISTER:
+				register_command(user_data);
+				break;
+			case LOGIN:
+				login_command(user_data);
+				break;
+			case ENTER_LIBRARY:
+				enter_library_command(user_data);
+				break;
+			case GET_BOOKS:
+				get_books_command(user_data);
+				break;
+			case GET_BOOK:
+				get_book_command(user_data);
+				break;
+			case ADD_BOOK:
+				add_book_command(user_data);
+				break;
+			case DELETE_BOOK:
+				delete_book_command(user_data);
+				break;
+			case LOGOUT:
+				logout_command(user_data);
+				break;
+			case EXIT:
+				return SUCCESS_EXIT_CODE;
+			default:
+				cout << "Unknown command\n";
 		}
 	}
 
